@@ -1,23 +1,344 @@
 package org.learning.reactive.extensions.core
 
-import java.util.concurrent.TimeUnit
+import java.util.Comparator
+import java.util.concurrent.{Callable, CompletableFuture, TimeUnit}
 
-import io.reactivex.rxjava3.core.{Observable => RxObservable}
-import io.reactivex.rxjava3.disposables.Disposable
-import io.reactivex.rxjava3.functions.{Consumer, Function}
+import io.reactivex.rxjava3.core.{Notification, ObservableEmitter, ObservableOnSubscribe, Observer, Scheduler, Observable => RxObservable}
+import io.reactivex.rxjava3.disposables.{Disposable => RxDisposable}
+import io.reactivex.rxjava3.functions.{Action, BiConsumer, BiFunction, Consumer, Function, Predicate, Supplier}
+import io.reactivex.rxjava3.schedulers.Timed
 
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
+import scala.util.{Failure, Success}
 
 class Observable[T](val rxObservable: RxObservable[T]) {
 
-  def subscribe[A >: T](f: A => Unit): Disposable = {
-    val function: Consumer[A] = a => f(a)
-    rxObservable subscribe function
+  def collect[U](initialItem: U)(f: => (U, T) => Unit): Single[U] = Single {
+    val supplier: Supplier[U] = () => initialItem
+    val biConsumer: BiConsumer[U, T] = (u, t) => f(u, t)
+
+    rxObservable.collect(supplier, biConsumer)
+  }
+
+  def contains(item: T): Single[Boolean] = Single {
+    rxObservable.contains(item).map(_.booleanValue)
+  }
+
+  def count(): Single[Long] = Single {
+    rxObservable.count().map(_.toLong)
+  }
+
+  def defaultIfEmpty(default: T): Observable[T] = Observable {
+    rxObservable defaultIfEmpty default
+  }
+
+  def delay(period: Duration): Observable[T] = Observable {
+    rxObservable.delay(period.toMillis, TimeUnit.MILLISECONDS)
+  }
+
+  def distinct(): Observable[T] = Observable {
+    rxObservable.distinct()
+  }
+
+  def distinct[K](keySelector: T => K): Observable[T] = Observable {
+    val function: Function[T, K] = t => keySelector(t)
+    rxObservable distinct function
+  }
+
+  def distinctUntilChanged(): Observable[T] = Observable {
+    rxObservable.distinctUntilChanged()
+  }
+
+  def distinctUntilChanged[K](keySelector: T => K): Observable[T] = Observable {
+    val function: Function[T, K] = t => keySelector(t)
+    rxObservable distinctUntilChanged function
+  }
+
+  def doAfterNext(onAfterNext: T => Unit): Observable[T] = Observable {
+    val consumer: Consumer[T] = t => onAfterNext(t)
+    rxObservable doAfterNext consumer
+  }
+
+  def doFinally(onFinally: => Unit): Observable[T] = Observable {
+    val action: Action = () => onFinally
+    rxObservable doFinally action
+  }
+
+  def doOnComplete(onComplete: => Unit): Observable[T] = Observable {
+    val action: Action = () => onComplete
+    rxObservable doOnComplete action
+  }
+
+  def doAfterTerminate(onAfterTerminate: => Unit): Observable[T] = Observable {
+    val action: Action = () => onAfterTerminate
+    rxObservable doAfterTerminate action
+  }
+
+  def doOnEach(onNotification: Notification[T] => Unit): Observable[T] = Observable {
+    val function: Consumer[Notification[T]] = notification => onNotification(notification)
+    rxObservable doOnEach function
+  }
+
+  def doOnError(onError: Throwable => Unit): Observable[T] = Observable {
+    val function: Consumer[Throwable] = e => onError(e)
+    rxObservable doOnError function
+  }
+
+  def doOnDispose(onDispose: => Unit): Observable[T] = Observable {
+    val action: Action = () => onDispose
+    rxObservable doOnDispose action
+  }
+
+  def doOnNext(onNext: T => Unit): Observable[T] = Observable {
+    val function: Consumer[T] = t => onNext(t)
+    rxObservable doOnNext function
+  }
+
+  def doOnSubscribe(onSubscribe: Disposable => Unit): Observable[T] = Observable {
+    val function: Consumer[RxDisposable] = d => onSubscribe(Disposable(d))
+    rxObservable doOnSubscribe function
+  }
+
+  def drop(count: Long): Observable[T] = Observable {
+    rxObservable skip count
+  }
+
+  def dropWhile(p: T => Boolean): Observable[T] = Observable {
+    val predicate: Predicate[T] = t => p(t)
+    rxObservable skipWhile predicate
+  }
+
+  def elementAt(index: Long): Maybe[T] = Maybe {
+    rxObservable elementAt index
+  }
+
+  def exists(p: T => Boolean): Single[Boolean] = Single {
+    val predicate: Predicate[T] = t => p(t)
+    rxObservable.any(predicate).map(_.booleanValue)
+  }
+
+  def filter(p: T => Boolean): Observable[T] = Observable {
+    val predicate: Predicate[T] = t => p(t)
+    rxObservable filter predicate
+  }
+
+  def first(default: T): Single[T] = Single {
+    rxObservable first default
+  }
+
+  def firstElement(): Maybe[T] = Maybe {
+    rxObservable.firstElement()
+  }
+
+  def fold(op: (T, T) => T): Maybe[T] = Maybe {
+    val biFunction: BiFunction[T, T, T] = (acc, t) => op(acc, t)
+    rxObservable reduce biFunction
+  }
+
+  def foldLeft[U](z: U)(op: (U, T) => U): Single[U] = Single {
+    val biFunction: BiFunction[U, T, U] = (acc, t) => op(acc, t)
+    rxObservable.reduce(z, biFunction)
+  }
+
+  def forall(p: T => Boolean): Single[Boolean] = Single {
+    val predicate: Predicate[T] = t => p(t)
+    rxObservable.all(predicate).map(_.booleanValue)
+  }
+
+  def isEmpty(): Single[Boolean] = Single {
+    rxObservable.isEmpty().map(_.booleanValue)
   }
 
   def map[R](f: T => R): Observable[R] = Observable {
     val function: Function[T, R] = t => f(t)
     rxObservable map function
+  }
+
+  def observeOn(scheduler: Scheduler) = Observable {
+    rxObservable observeOn scheduler
+  }
+
+  def onErrorResumeNext(fallback: Throwable => Observable[T]): Observable[T] = Observable {
+    val function: Function[Throwable, RxObservable[T]] = e => fallback(e).rxObservable
+    rxObservable onErrorResumeNext function
+  }
+
+  def onErrorResumeWith(fallback: Observable[T]): Observable[T] = Observable {
+    rxObservable onErrorResumeWith fallback.rxObservable
+  }
+
+  def onErrorReturn(item: Throwable => T): Observable[T] = Observable {
+    val function: Function[Throwable, T] = e => item(e)
+    rxObservable onErrorReturn function
+  }
+
+  def onErrorReturnItem(item: T): Observable[T] = Observable {
+    rxObservable onErrorReturnItem item
+  }
+
+  def publish(): ConnectableObservable[T] =
+    ConnectableObservable(rxObservable.publish())
+
+  def repeat(): Observable[T] = Observable {
+    rxObservable.repeat()
+  }
+
+  def repeat(times: Long): Observable[T] = Observable {
+    rxObservable repeat times
+  }
+
+  def retry(): Observable[T] = Observable {
+    rxObservable.retry()
+  }
+
+  def retry(times: Long): Observable[T] = Observable {
+    rxObservable retry times
+  }
+
+  def single(defaultItem: T): Single[T] = Single {
+    rxObservable single defaultItem
+  }
+
+  def scan(op: (T, T) => T): Observable[T] = Observable {
+    val biFunction: BiFunction[T, T, T] = (acc, t) => op(acc, t)
+    rxObservable scan biFunction
+  }
+
+  def scanLeft[U](z: U)(op: (U, T) => U): Observable[U] = Observable {
+    val bifunction: BiFunction[U, T, U] = (acc, t) => op(acc, t)
+    rxObservable.scan(z, bifunction)
+  }
+
+  def sorted(implicit ord: Ordering[T]): Observable[T] = Observable {
+    rxObservable sorted ord
+  }
+
+  def sorted[U](keyExtractor: T => U)(implicit ord: Ordering[U]): Observable[T] = Observable {
+    val function: java.util.function.Function[T, U] = t => keyExtractor(t)
+    val comparator: Comparator[U] = (u1, u2) => ord.compare(u1, u2)
+
+    rxObservable sorted Comparator.comparing(function, comparator)
+  }
+
+  def startWith(items: T*): Observable[T] = Observable {
+    rxObservable.startWithArray(items: _*)
+  }
+
+  def startWith(items: Iterable[T]): Observable[T] = Observable {
+    rxObservable startWithIterable items.asJava
+  }
+
+  def startWithItem(item: T): Observable[T] = Observable {
+    rxObservable startWithItem item
+  }
+
+  def subscribe[A >: T](onNext: A => Unit): Disposable = {
+    val consumer: Consumer[A] = a => onNext(a)
+
+    Disposable {
+      rxObservable subscribe consumer
+    }
+  }
+
+  def subscribe[A >: T](onNext: A => Unit, onError: Throwable => Unit): Disposable = {
+    val consumer1: Consumer[A] = a => onNext(a)
+    val consumer2: Consumer[Throwable] = t => onError(t)
+
+    Disposable {
+      rxObservable.subscribe(consumer1, consumer2)
+    }
+  }
+
+  def subscribe[A >: T](onNext: A => Unit, onError: Throwable => Unit, onComplete: => Unit): Disposable = {
+    val consumer1: Consumer[A] = a => onNext(a)
+    val consumer2: Consumer[Throwable] = t => onError(t)
+    val action: Action = () => onComplete
+
+    Disposable {
+      rxObservable.subscribe(consumer1, consumer2, action)
+    }
+  }
+
+  def subscribe[A >: T](observer: Observer[A]): Unit =
+    rxObservable subscribe observer
+
+  def subscribeWith[A >: T, E <: Observer[A]](observer: E): E =
+    rxObservable subscribeWith observer
+
+  def switchIfEmpty(other: Observable[T]): Observable[T] = Observable {
+    rxObservable switchIfEmpty other.rxObservable
+  }
+
+  def take(count: Long): Observable[T] = Observable {
+    rxObservable take count
+  }
+
+  def take(period: Duration): Observable[T] = Observable {
+    rxObservable.take(period.toMillis, TimeUnit.MILLISECONDS)
+  }
+
+  def takeWhile(p: T => Boolean): Observable[T] = Observable {
+    val predicate: Predicate[T] = t => p(t)
+    rxObservable takeWhile predicate
+  }
+
+  def timeInterval(unit: TimeUnit): Observable[Timed[T]] = Observable {
+    rxObservable timeInterval unit
+  }
+
+  def timestamp(unit: TimeUnit): Observable[Timed[T]] = Observable {
+    rxObservable timestamp unit
+  }
+
+  def toList(): Single[List[T]] = Single {
+    rxObservable.toList().map(_.asScala).map(_.toList)
+  }
+
+  def toList(capacityHint: Int): Single[List[T]] = Single {
+    rxObservable.toList(capacityHint).map(_.asScala).map(_.toList)
+  }
+
+  def toListJava(collectionSupplier: => java.util.Collection[T]): Single[java.util.Collection[T]] = Single {
+    val function: Supplier[java.util.Collection[T]] = () => collectionSupplier
+    rxObservable.toList(function)
+  }
+
+  def toMap[K](keySelector: T => K): Single[Map[K, T]] = Single {
+    val function: Function[T, K] = t => keySelector(t)
+    rxObservable.toMap(function).map(_.asScala).map(_.toMap)
+  }
+
+  def toMap[K, V](keySelector: T => K)(valueSelector: T => V): Single[Map[K, V]] = Single {
+    val function1: Function[T, K] = t => keySelector(t)
+    val function2: Function[T, V] = t => valueSelector(t)
+
+    rxObservable.toMap(function1, function2).map(_.asScala).map(_.toMap)
+  }
+
+  def toMapJava[K, V](mapSupplier: => java.util.Map[K, V])
+                     (keySelector: T => K)(valueSelector: T => V): Single[java.util.Map[K, V]] = Single {
+    val function1: Function[T, K] = t => keySelector(t)
+    val function2: Function[T, V] = t => valueSelector(t)
+    val supplier: Supplier[java.util.Map[K, V]] = () => mapSupplier
+
+    rxObservable.toMap(function1, function2, supplier)
+  }
+
+  def toMultimap[K](keySelector: T => K): Single[Map[K, Seq[T]]] = Single {
+    val function: Function[T, K] = t => keySelector(t)
+
+    val mapper: Map[K, java.util.Collection[T]] => Map[K, Seq[T]] = m => m.map {
+      case (key, value) =>
+        key -> value.asScala.toSeq
+    }
+
+    rxObservable.toMultimap(function).map(_.asScala.toMap).map(mapper(_))
+  }
+
+  def toSortedList()(implicit ord: Ordering[T]): Single[List[T]] = Single {
+    rxObservable.toSortedList(ord).map(_.asScala).map(_.toList)
   }
 
 }
@@ -27,13 +348,89 @@ object Observable {
   def apply[T](rxObservable: RxObservable[T]): Observable[T] =
     new Observable(rxObservable)
 
-  def just[T](item1: T, item2: T, item3: T): Observable[T] = Observable {
-    RxObservable.just(item1, item2, item3)
+  def create[T](f: ObservableEmitter[T] => Unit): Observable[T] = Observable {
+    val source = new ObservableOnSubscribe[T] {
+      override def subscribe(emitter: ObservableEmitter[T]): Unit = f(emitter)
+    }
+
+    RxObservable create source
+  }
+
+  def empty[T](): Observable[T] = Observable {
+    RxObservable.empty()
+  }
+
+  def error[T](throwable: Throwable): Observable[T] = Observable {
+    RxObservable error throwable
+  }
+
+  def error[T](throwable: () => Throwable): Observable[T] = Observable {
+    val supplier = new Supplier[Throwable] {
+      override def get(): Throwable = throwable()
+    }
+
+    RxObservable error supplier
+  }
+
+  def defer[T](observable: => Observable[T]): Observable[T] = Observable {
+    val supplier: Supplier[RxObservable[T]] = () => observable.rxObservable
+    RxObservable defer supplier
+  }
+
+  def from[T](body: => T): Observable[T] = Observable {
+    val callable: Callable[T] = () => body
+    RxObservable fromCallable callable
+  }
+
+  def from[T](iterable: Iterable[T]): Observable[T] = Observable {
+    RxObservable fromIterable iterable.asJava
+  }
+
+  def from[T](future: Future[T])(implicit ex: ExecutionContext): Observable[T] = Observable {
+    val javaFuture = new CompletableFuture[T]()
+
+    future.onComplete {
+      case Success(value) =>
+        javaFuture complete value
+      case Failure(e) =>
+        javaFuture completeExceptionally e
+    }
+
+    RxObservable fromFuture javaFuture
+  }
+
+  def fromAction[T](b: => Unit): Observable[T] = Observable {
+    val action: Action = () => b
+    RxObservable fromAction action
   }
 
   def interval(period: Duration): Observable[Long] = Observable {
     RxObservable.interval(period.toMillis, TimeUnit.MILLISECONDS)
       .map(_.longValue)
+  }
+
+  def just[T](item: T): Observable[T] = Observable {
+    RxObservable just item
+  }
+
+  def just[T](item1: T, item2: T): Observable[T] = Observable {
+    RxObservable.just(item1, item2)
+  }
+
+  def just[T](item1: T, item2: T, item3: T): Observable[T] = Observable {
+    RxObservable.just(item1, item2, item3)
+  }
+
+  def never[T](): Observable[T] = Observable {
+    RxObservable.never()
+  }
+
+  def range(start: Int, count: Int): Observable[Int] = Observable {
+    RxObservable.range(start, count).map(_.toInt)
+  }
+
+  def sequenceEqual[T](source1: Observable[T], source2: Observable[T]): Single[Boolean] = Single {
+    RxObservable.sequenceEqual(source1.rxObservable, source2.rxObservable).map(_.booleanValue)
   }
 
 }

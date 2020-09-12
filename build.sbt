@@ -16,10 +16,16 @@ ThisBuild / libraryDependencies ++= Seq(
 
 ThisBuild / fork := true
   
-lazy val root = (Project("reactive-extensions", file(".")))
-  .aggregate(core, thinkingReactively)
+lazy val root = Project("reactive-extensions", file("."))
+  .aggregate(core, thinkingReactively, observableAndObserver, basicOperators)
 
 lazy val core = (project in file("core"))
 
-lazy val thinkingReactively = (Project("thinking-reactively", file("thinking-reactively")))
+lazy val thinkingReactively = Project("thinking-reactively", file("thinking-reactively"))
 	.dependsOn(core)
+
+lazy val observableAndObserver =  Project("observable-and-observer", file("observable-and-observer"))
+  .dependsOn(core)
+
+lazy val basicOperators =  Project("basic-operators", file("basic-operators"))
+  .dependsOn(core)
