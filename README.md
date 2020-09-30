@@ -18,3 +18,7 @@ The source code contains different modules for the following chapters:
 3. Chapter 3 - Basic Operators
 
     Module name: **basic-operators**
+	
+4. Chapter 4 - Combining Observables
+
+    Module name: **combining-observables**

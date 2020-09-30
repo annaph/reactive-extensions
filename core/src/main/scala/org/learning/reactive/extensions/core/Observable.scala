@@ -3,7 +3,7 @@ package org.learning.reactive.extensions.core
 import java.util.Comparator
 import java.util.concurrent.{Callable, CompletableFuture, TimeUnit}
 
-import io.reactivex.rxjava3.core.{Notification, ObservableEmitter, ObservableOnSubscribe, Observer, Scheduler, Observable => RxObservable}
+import io.reactivex.rxjava3.core.{Notification, ObservableEmitter, ObservableOnSubscribe, Observer, Scheduler, Observable => RxObservable, Single => RxSingle}
 import io.reactivex.rxjava3.disposables.{Disposable => RxDisposable}
 import io.reactivex.rxjava3.functions.{Action, BiConsumer, BiFunction, Consumer, Function, Predicate, Supplier}
 import io.reactivex.rxjava3.schedulers.Timed
@@ -15,11 +15,24 @@ import scala.util.{Failure, Success}
 
 class Observable[T](val rxObservable: RxObservable[T]) {
 
+  def ambWith(other: Observable[T]): Observable[T] = Observable {
+    rxObservable ambWith other.rxObservable
+  }
+
   def collect[U](initialItem: U)(f: => (U, T) => Unit): Single[U] = Single {
     val supplier: Supplier[U] = () => initialItem
     val biConsumer: BiConsumer[U, T] = (u, t) => f(u, t)
 
     rxObservable.collect(supplier, biConsumer)
+  }
+
+  def concatMap[R](mapper: T => Observable[R]): Observable[R] = Observable {
+    val function: Function[T, RxObservable[R]] = t => mapper(t).rxObservable
+    rxObservable concatMap function
+  }
+
+  def concatWith(other: Observable[T]): Observable[T] = Observable {
+    rxObservable concatWith other.rxObservable
   }
 
   def contains(item: T): Single[Boolean] = Single {
@@ -119,9 +132,9 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable.any(predicate).map(_.booleanValue)
   }
 
-  def filter(p: T => Boolean): Observable[T] = Observable {
-    val predicate: Predicate[T] = t => p(t)
-    rxObservable filter predicate
+  def filter(predicate: T => Boolean): Observable[T] = Observable {
+    val function: Predicate[T] = t => predicate(t)
+    rxObservable filter function
   }
 
   def first(default: T): Single[T] = Single {
@@ -130,6 +143,23 @@ class Observable[T](val rxObservable: RxObservable[T]) {
 
   def firstElement(): Maybe[T] = Maybe {
     rxObservable.firstElement()
+  }
+
+  def flatMap[R](mapper: T => Observable[R]): Observable[R] = Observable {
+    val function: Function[T, RxObservable[R]] = t => mapper(t).rxObservable
+    rxObservable flatMap function
+  }
+
+  def flatMap[U, R](mapper: T => Observable[U], combiner: (T, U) => R): Observable[R] = Observable {
+    val function: Function[T, RxObservable[U]] = t => mapper(t).rxObservable
+    val biFunction: BiFunction[T, U, R] = (t, u) => combiner(t, u)
+
+    rxObservable.flatMap(function, biFunction)
+  }
+
+  def flatMapSingle[R](mapper: T => Single[R]): Observable[R] = Observable {
+    val function: Function[T, RxSingle[R]] = t => mapper(t).rxSingle
+    rxObservable.flatMapSingle(function)
   }
 
   def fold(op: (T, T) => T): Maybe[T] = Maybe {
@@ -147,13 +177,22 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable.all(predicate).map(_.booleanValue)
   }
 
+  def groupBy[K](keySelector: T => K): Observable[GroupedObservable[K, T]] = Observable {
+    val function: Function[T, K] = t => keySelector(t)
+    rxObservable.groupBy(function).map(GroupedObservable(_))
+  }
+
   def isEmpty(): Single[Boolean] = Single {
     rxObservable.isEmpty().map(_.booleanValue)
   }
 
-  def map[R](f: T => R): Observable[R] = Observable {
-    val function: Function[T, R] = t => f(t)
+  def map[R](mapper: T => R): Observable[R] = Observable {
+    val function: Function[T, R] = t => mapper(t)
     rxObservable map function
+  }
+
+  def mergeWith(other: Observable[T]): Observable[T] = Observable {
+    rxObservable mergeWith other.rxObservable
   }
 
   def observeOn(scheduler: Scheduler) = Observable {
@@ -341,12 +380,44 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable.toSortedList(ord).map(_.asScala).map(_.toList)
   }
 
+  def zipWith[U, R](other: Observable[U])(zipper: (T, U) => R): Observable[R] = Observable {
+    val biFunction: BiFunction[T, U, R] = (t, u) => zipper(t, u)
+    rxObservable.zipWith(other.rxObservable, biFunction)
+  }
+
+  def withLatestFrom[U, R](other: Observable[U])(combiner: (T, U) => R): Observable[R] = Observable {
+    val biFunction: BiFunction[T, U, R] = (t, u) => combiner(t, u)
+    rxObservable.withLatestFrom(other.rxObservable, biFunction)
+  }
+
 }
 
 object Observable {
 
   def apply[T](rxObservable: RxObservable[T]): Observable[T] =
     new Observable(rxObservable)
+
+  def amb[T](sources: Observable[T]*): Observable[T] = Observable {
+    RxObservable amb sources.map(_.rxObservable).asJava
+  }
+
+  def amb[T](sources: Iterable[Observable[T]]): Observable[T] = Observable {
+    RxObservable amb sources.map(_.rxObservable).asJava
+  }
+
+  def combineLatest[T1, T2, R](source1: Observable[T1], source2: Observable[T2])
+                              (combiner: (T1, T2) => R): Observable[R] = Observable {
+    val biFunction: BiFunction[T1, T2, R] = (t1, t2) => combiner(t1, t2)
+    RxObservable.combineLatest(source1.rxObservable, source2.rxObservable, biFunction)
+  }
+
+  def concat[T](sources: Observable[T]*): Observable[T] = Observable {
+    RxObservable concat sources.map(_.rxObservable).asJava
+  }
+
+  def concat[T](sources: Iterable[Observable[T]]): Observable[T] = Observable {
+    RxObservable concat sources.map(_.rxObservable).asJava
+  }
 
   def create[T](f: ObservableEmitter[T] => Unit): Observable[T] = Observable {
     val source = new ObservableOnSubscribe[T] {
@@ -377,9 +448,8 @@ object Observable {
     RxObservable defer supplier
   }
 
-  def from[T](body: => T): Observable[T] = Observable {
-    val callable: Callable[T] = () => body
-    RxObservable fromCallable callable
+  def from[T](items: T*): Observable[T] = Observable {
+    RxObservable fromIterable items.asJava
   }
 
   def from[T](iterable: Iterable[T]): Observable[T] = Observable {
@@ -399,9 +469,14 @@ object Observable {
     RxObservable fromFuture javaFuture
   }
 
-  def fromAction[T](b: => Unit): Observable[T] = Observable {
-    val action: Action = () => b
-    RxObservable fromAction action
+  def fromAction[T](action: => Unit): Observable[T] = Observable {
+    val function: Action = () => action
+    RxObservable fromAction function
+  }
+
+  def fromCallable[T](callable: => T): Observable[T] = Observable {
+    val function: Callable[T] = () => callable
+    RxObservable fromCallable function
   }
 
   def interval(period: Duration): Observable[Long] = Observable {
@@ -425,6 +500,14 @@ object Observable {
     RxObservable.never()
   }
 
+  def merge[T](sources: Observable[T]*): Observable[T] = Observable {
+    RxObservable merge sources.map(_.rxObservable).asJava
+  }
+
+  def merge[T](sources: Iterable[Observable[T]]): Observable[T] = Observable {
+    RxObservable merge sources.map(_.rxObservable).asJava
+  }
+
   def range(start: Int, count: Int): Observable[Int] = Observable {
     RxObservable.range(start, count).map(_.toInt)
   }
@@ -432,5 +515,11 @@ object Observable {
   def sequenceEqual[T](source1: Observable[T], source2: Observable[T]): Single[Boolean] = Single {
     RxObservable.sequenceEqual(source1.rxObservable, source2.rxObservable).map(_.booleanValue)
   }
+
+  def zip[T1, T2, R](source1: Observable[T1], source2: Observable[T2])(zipper: (T1, T2) => R): Observable[R] =
+    Observable {
+      val biFunction: BiFunction[T1, T2, R] = (t1, t2) => zipper(t1, t2)
+      RxObservable.zip(source1.rxObservable, source2.rxObservable, biFunction)
+    }
 
 }

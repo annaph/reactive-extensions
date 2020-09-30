@@ -180,7 +180,7 @@ object Example26 extends App {
 
 object Example27 extends App {
 
-  val source = Observable.from(1 / 0)
+  val source = Observable.fromCallable(1 / 0)
 
   source.subscribe(
     n => log(s"RECEIVED NUMBER DIVISION: $n"),
