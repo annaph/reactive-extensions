@@ -22,3 +22,8 @@ The source code contains different modules for the following chapters:
 4. Chapter 4 - Combining Observables
 
     Module name: **combining-observables**
+
+5. Chapter 5 - Multicasting, Replaying, and Caching
+
+    Module name: **multicasting**
+

@@ -6,8 +6,20 @@ import io.reactivex.rxjava3.observables.{ConnectableObservable => RxConnectableO
 class ConnectableObservable[T](val rxConnectableObservable: RxConnectableObservable[T])
   extends Observable[T](rxConnectableObservable) {
 
+  def autoConnect(): Observable[T] = Observable {
+    rxConnectableObservable.autoConnect()
+  }
+
+  def autoConnect(numberOfSubscribers: Int): Observable[T] = Observable {
+    rxConnectableObservable autoConnect numberOfSubscribers
+  }
+
   def connect(): Disposable =
     rxConnectableObservable.connect()
+
+  def refCount(): Observable[T] = Observable {
+    rxConnectableObservable.refCount()
+  }
 
 }
 

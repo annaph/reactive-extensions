@@ -19,6 +19,14 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable ambWith other.rxObservable
   }
 
+  def cache(): Observable[T] = Observable {
+    rxObservable.cache()
+  }
+
+  def cacheWithInitialCapacity(initialCapacity: Int): Observable[T] = Observable {
+    rxObservable cacheWithInitialCapacity initialCapacity
+  }
+
   def collect[U](initialItem: U)(f: => (U, T) => Unit): Single[U] = Single {
     val supplier: Supplier[U] = () => initialItem
     val biConsumer: BiConsumer[U, T] = (u, t) => f(u, t)
@@ -217,8 +225,9 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable onErrorReturnItem item
   }
 
-  def publish(): ConnectableObservable[T] =
-    ConnectableObservable(rxObservable.publish())
+  def publish(): ConnectableObservable[T] = ConnectableObservable {
+    rxObservable.publish()
+  }
 
   def repeat(): Observable[T] = Observable {
     rxObservable.repeat()
@@ -226,6 +235,22 @@ class Observable[T](val rxObservable: RxObservable[T]) {
 
   def repeat(times: Long): Observable[T] = Observable {
     rxObservable repeat times
+  }
+
+  def replay(): ConnectableObservable[T] = ConnectableObservable {
+    rxObservable.replay()
+  }
+
+  def replay(bufferSize: Int): ConnectableObservable[T] = ConnectableObservable {
+    rxObservable replay bufferSize
+  }
+
+  def replay(window: Duration): ConnectableObservable[T] = ConnectableObservable {
+    rxObservable.replay(window.toMillis, TimeUnit.MILLISECONDS)
+  }
+
+  def replay(bufferSize: Int, window: Duration): ConnectableObservable[T] = ConnectableObservable {
+    rxObservable.replay(bufferSize, window.toMillis, TimeUnit.MILLISECONDS)
   }
 
   def retry(): Observable[T] = Observable {
@@ -248,6 +273,10 @@ class Observable[T](val rxObservable: RxObservable[T]) {
   def scanLeft[U](z: U)(op: (U, T) => U): Observable[U] = Observable {
     val bifunction: BiFunction[U, T, U] = (acc, t) => op(acc, t)
     rxObservable.scan(z, bifunction)
+  }
+
+  def share(): Observable[T] = Observable {
+    rxObservable.share()
   }
 
   def sorted(implicit ord: Ordering[T]): Observable[T] = Observable {
