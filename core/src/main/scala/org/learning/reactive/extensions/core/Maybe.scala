@@ -1,13 +1,22 @@
 package org.learning.reactive.extensions.core
 
-import io.reactivex.rxjava3.core.{Maybe => RxMaybe}
-import io.reactivex.rxjava3.functions.{Action, Consumer}
+import io.reactivex.rxjava3.core.{Scheduler, Maybe => RxMaybe}
+import io.reactivex.rxjava3.functions.{Action, Consumer, Function}
 
 class Maybe[T](val rxMaybe: RxMaybe[T]) {
 
   def doOnSuccess(onSuccess: T => Unit): Maybe[T] = Maybe {
     val consumer: Consumer[T] = t => onSuccess(t)
     rxMaybe doOnSuccess consumer
+  }
+
+  def map[R](mapper: T => R): Maybe[R] = Maybe {
+    val function: Function[T, R] = t => mapper(t)
+    rxMaybe map function
+  }
+
+  def observeOn(scheduler: Scheduler): Maybe[T] = Maybe {
+    rxMaybe observeOn scheduler
   }
 
   def subscribe(onSuccess: T => Unit): Disposable = {

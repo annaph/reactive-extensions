@@ -15,9 +15,16 @@ ThisBuild / libraryDependencies ++= Seq(
     "io.reactivex.rxjava3" % "rxjava" % "3.0.4")
 
 ThisBuild / fork := true
-  
+
 lazy val root = Project("reactive-extensions", file("."))
-  .aggregate(core, thinkingReactively, observableAndObserver, basicOperators, combiningObservables, multicasting)
+  .aggregate(
+    core,
+    thinkingReactively,
+    observableAndObserver,
+    basicOperators,
+    combiningObservables,
+    multicasting,
+    concurrency)
 
 lazy val core = (project in file("core"))
 
@@ -34,4 +41,7 @@ lazy val combiningObservables =  Project("combining-observables", file("combinin
   .dependsOn(core)
 
 lazy val multicasting =  project.in(file("multicasting"))
+  .dependsOn(core)
+
+lazy val concurrency =  project.in(file("concurrency"))
   .dependsOn(core)

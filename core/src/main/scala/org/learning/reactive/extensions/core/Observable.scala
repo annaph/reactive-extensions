@@ -19,6 +19,14 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable ambWith other.rxObservable
   }
 
+  def blockingSubscribe[A >: T](onNext: A => Unit, onError: Throwable => Unit, onComplete: => Unit): Unit = {
+    val consumer1: Consumer[A] = a => onNext(a)
+    val consumer2: Consumer[Throwable] = t => onError(t)
+    val action: Action = () => onComplete
+
+    rxObservable.blockingSubscribe(consumer1, consumer2, action)
+  }
+
   def cache(): Observable[T] = Observable {
     rxObservable.cache()
   }
@@ -203,7 +211,7 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable mergeWith other.rxObservable
   }
 
-  def observeOn(scheduler: Scheduler) = Observable {
+  def observeOn(scheduler: Scheduler): Observable[T] = Observable {
     rxObservable observeOn scheduler
   }
 
@@ -332,6 +340,10 @@ class Observable[T](val rxObservable: RxObservable[T]) {
   def subscribe[A >: T](observer: Observer[A]): Unit =
     rxObservable subscribe observer
 
+  def subscribeOn(scheduler: Scheduler): Observable[T] = Observable {
+    rxObservable subscribeOn scheduler
+  }
+
   def subscribeWith[A >: T, E <: Observer[A]](observer: E): E =
     rxObservable subscribeWith observer
 
@@ -407,6 +419,10 @@ class Observable[T](val rxObservable: RxObservable[T]) {
 
   def toSortedList()(implicit ord: Ordering[T]): Single[List[T]] = Single {
     rxObservable.toSortedList(ord).map(_.asScala).map(_.toList)
+  }
+
+  def unsubscribeOn(scheduler: Scheduler): Observable[T] = Observable {
+    rxObservable unsubscribeOn scheduler
   }
 
   def zipWith[U, R](other: Observable[U])(zipper: (T, U) => R): Observable[R] = Observable {
@@ -509,8 +525,11 @@ object Observable {
   }
 
   def interval(period: Duration): Observable[Long] = Observable {
-    RxObservable.interval(period.toMillis, TimeUnit.MILLISECONDS)
-      .map(_.longValue)
+    RxObservable.interval(period.toMillis, TimeUnit.MILLISECONDS).map(_.longValue)
+  }
+
+  def interval(period: Duration, scheduler: Scheduler): Observable[Long] = Observable {
+    RxObservable.interval(period.toMillis, TimeUnit.MILLISECONDS, scheduler).map(_.longValue)
   }
 
   def just[T](item: T): Observable[T] = Observable {

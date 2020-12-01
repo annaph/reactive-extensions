@@ -27,3 +27,6 @@ The source code contains different modules for the following chapters:
 
     Module name: **multicasting**
 
+6. Chapter 6 - Concurrency and Parallelization
+
+    Module name: **concurrency**
