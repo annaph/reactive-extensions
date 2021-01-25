@@ -24,9 +24,10 @@ lazy val root = Project("reactive-extensions", file("."))
     basicOperators,
     combiningObservables,
     multicasting,
-    concurrency)
+    concurrency,
+    buffering)
 
-lazy val core = (project in file("core"))
+lazy val core = project in file("core")
 
 lazy val thinkingReactively = Project("thinking-reactively", file("thinking-reactively"))
 	.dependsOn(core)
@@ -44,4 +45,7 @@ lazy val multicasting =  project.in(file("multicasting"))
   .dependsOn(core)
 
 lazy val concurrency =  project.in(file("concurrency"))
+  .dependsOn(core)
+
+lazy val buffering =  project.in(file("buffering"))
   .dependsOn(core)

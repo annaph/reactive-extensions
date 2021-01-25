@@ -27,6 +27,35 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable.blockingSubscribe(consumer1, consumer2, action)
   }
 
+  def buffer(count: Int): Observable[List[T]] = Observable {
+    rxObservable.buffer(count).map(_.asScala).map(_.toList)
+  }
+
+  def buffer(count: Int, skip: Int): Observable[List[T]] = Observable {
+    rxObservable.buffer(count, skip).map(_.asScala).map(_.toList)
+  }
+
+  def buffer[U <: java.util.Collection[T]](count: Int, bufferSupplier: => U): Observable[U] = Observable {
+    val supplier: Supplier[U] = () => bufferSupplier
+    rxObservable.buffer(count, supplier)
+  }
+
+  def buffer(timespan: Duration): Observable[List[T]] = Observable {
+    rxObservable.buffer(timespan.toMillis, TimeUnit.MILLISECONDS).map(_.asScala).map(_.toList)
+  }
+
+  def buffer(timespan: Duration, timeskip: Duration): Observable[List[T]] = Observable {
+    rxObservable.buffer(timespan.toMillis, timeskip.toMillis, TimeUnit.MILLISECONDS).map(_.asScala).map(_.toList)
+  }
+
+  def buffer(timespan: Duration, count: Int): Observable[List[T]] = Observable {
+    rxObservable.buffer(timespan.toMillis, TimeUnit.MILLISECONDS, count).map(_.asScala).map(_.toList)
+  }
+
+  def buffer[B](boundary: Observable[B]): Observable[List[T]] = Observable {
+    rxObservable.buffer(boundary.rxObservable).map(_.asScala).map(_.toList)
+  }
+
   def cache(): Observable[T] = Observable {
     rxObservable.cache()
   }
@@ -351,6 +380,11 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable switchIfEmpty other.rxObservable
   }
 
+  def switchMap[R](mapper: T => Observable[R]): Observable[R] = Observable {
+    val function: Function[T, RxObservable[R]] = t => mapper(t).rxObservable
+    rxObservable switchMap function
+  }
+
   def take(count: Long): Observable[T] = Observable {
     rxObservable take count
   }
@@ -362,6 +396,18 @@ class Observable[T](val rxObservable: RxObservable[T]) {
   def takeWhile(p: T => Boolean): Observable[T] = Observable {
     val predicate: Predicate[T] = t => p(t)
     rxObservable takeWhile predicate
+  }
+
+  def throttleFirst(interval: Duration): Observable[T] = Observable {
+    rxObservable.throttleFirst(interval.toMillis, TimeUnit.MILLISECONDS)
+  }
+
+  def throttleLast(interval: Duration): Observable[T] = Observable {
+    rxObservable.throttleLast(interval.toMillis, TimeUnit.MILLISECONDS)
+  }
+
+  def throttleWithTimeout(timeout: Duration): Observable[T] = Observable {
+    rxObservable.throttleWithTimeout(timeout.toMillis, TimeUnit.MILLISECONDS)
   }
 
   def timeInterval(unit: TimeUnit): Observable[Timed[T]] = Observable {
@@ -428,6 +474,22 @@ class Observable[T](val rxObservable: RxObservable[T]) {
   def zipWith[U, R](other: Observable[U])(zipper: (T, U) => R): Observable[R] = Observable {
     val biFunction: BiFunction[T, U, R] = (t, u) => zipper(t, u)
     rxObservable.zipWith(other.rxObservable, biFunction)
+  }
+
+  def window(count: Int): Observable[Observable[T]] = Observable {
+    rxObservable.window(count).map(Observable(_))
+  }
+
+  def window(count: Int, skip: Int): Observable[Observable[T]] = Observable {
+    rxObservable.window(count, skip).map(Observable(_))
+  }
+
+  def window(timespan: Duration): Observable[Observable[T]] = Observable {
+    rxObservable.window(timespan.toMillis, TimeUnit.MILLISECONDS).map(Observable(_))
+  }
+
+  def window[B](boundary: Observable[B]): Observable[Observable[T]] = Observable {
+    rxObservable.window(boundary.rxObservable).map(Observable(_))
   }
 
   def withLatestFrom[U, R](other: Observable[U])(combiner: (T, U) => R): Observable[R] = Observable {

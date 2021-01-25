@@ -3,7 +3,7 @@ package org.learning.reactive.extensions
 import java.io.{BufferedWriter, File, FileWriter}
 import java.util.concurrent.ThreadLocalRandom
 
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration._
 import scala.io.Source
 import scala.util.{Failure, Try}
 
@@ -23,6 +23,11 @@ package object core {
     case Failure(e) =>
       e.printStackTrace()
     case _ =>
+  }
+
+  def randomDuration(): Duration = {
+    val random = ThreadLocalRandom.current().nextInt(2000)
+    Duration(random, MILLISECONDS)
   }
 
   def hrefResponse(path: String): String = {
