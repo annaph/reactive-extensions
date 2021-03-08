@@ -1,13 +1,12 @@
 package org.learning.reactive.extensions.core
 
-import java.util.Comparator
-import java.util.concurrent.{Callable, CompletableFuture, TimeUnit}
-
-import io.reactivex.rxjava3.core.{Notification, ObservableEmitter, ObservableOnSubscribe, Observer, Scheduler, Observable => RxObservable, Single => RxSingle}
+import io.reactivex.rxjava3.core.{BackpressureStrategy, Notification, ObservableEmitter, ObservableOnSubscribe, Observer, Scheduler, Observable => RxObservable, Single => RxSingle}
 import io.reactivex.rxjava3.disposables.{Disposable => RxDisposable}
 import io.reactivex.rxjava3.functions.{Action, BiConsumer, BiFunction, Consumer, Function, Predicate, Supplier}
 import io.reactivex.rxjava3.schedulers.Timed
 
+import java.util.Comparator
+import java.util.concurrent.{Callable, CompletableFuture, TimeUnit}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
@@ -416,6 +415,10 @@ class Observable[T](val rxObservable: RxObservable[T]) {
 
   def timestamp(unit: TimeUnit): Observable[Timed[T]] = Observable {
     rxObservable timestamp unit
+  }
+
+  def toFlowable(strategy: BackpressureStrategy): Flowable[T] = Flowable {
+    rxObservable.toFlowable(strategy)
   }
 
   def toList(): Single[List[T]] = Single {

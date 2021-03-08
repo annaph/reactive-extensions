@@ -34,3 +34,7 @@ The source code contains different modules for the following chapters:
 7. Chapter 7 - Switching, Throttling, Windowing, and Buffering
 
 	Module name: **buffering**
+
+8. Chapter 8 - Flowable and Backpressure
+
+   Module name: **backpressure**

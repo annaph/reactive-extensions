@@ -2,7 +2,6 @@ package org.learning.reactive.extensions
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.util.concurrent.ThreadLocalRandom
-
 import scala.concurrent.duration._
 import scala.io.Source
 import scala.util.{Failure, Try}
@@ -15,6 +14,13 @@ package object core {
   def intenseCalculation[T](value: T): T = {
     val time = ThreadLocalRandom.current().nextInt(0, 3)
     sleep(time.seconds)
+
+    value
+  }
+
+  def mediumIntenseCalculation[T](value: T): T = {
+    val time = ThreadLocalRandom.current().nextInt(0, 200)
+    sleep(time.milliseconds)
 
     value
   }
