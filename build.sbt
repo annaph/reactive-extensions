@@ -26,7 +26,9 @@ lazy val root = Project("reactive-extensions", file("."))
     multicasting,
     concurrency,
     buffering,
-    backpressure)
+    backpressure,
+    customOperators
+  )
 
 lazy val core = project in file("core")
 
@@ -52,4 +54,7 @@ lazy val buffering =  project.in(file("buffering"))
   .dependsOn(core)
 
 lazy val backpressure =  project.in(file("backpressure"))
+  .dependsOn(core)
+
+lazy val customOperators =  Project("custom-operators", file("custom-operators"))
   .dependsOn(core)

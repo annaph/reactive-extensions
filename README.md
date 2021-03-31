@@ -38,3 +38,7 @@ The source code contains different modules for the following chapters:
 8. Chapter 8 - Flowable and Backpressure
 
    Module name: **backpressure**
+
+9. Chapter 9 - Transformers and Custom Operators
+
+   Module name: **custom-operators**

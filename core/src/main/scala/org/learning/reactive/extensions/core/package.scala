@@ -11,16 +11,17 @@ package object core {
   def log(msg: String): Unit =
     println(s"${Thread.currentThread.getName}: $msg")
 
+  def tryToExecute[T](action: => T)(onError: Throwable => T): T =
+    try {
+      action
+    } catch {
+      case e: Exception =>
+        onError(e)
+    }
+
   def intenseCalculation[T](value: T): T = {
     val time = ThreadLocalRandom.current().nextInt(0, 3)
     sleep(time.seconds)
-
-    value
-  }
-
-  def mediumIntenseCalculation[T](value: T): T = {
-    val time = ThreadLocalRandom.current().nextInt(0, 200)
-    sleep(time.milliseconds)
 
     value
   }
@@ -29,6 +30,13 @@ package object core {
     case Failure(e) =>
       e.printStackTrace()
     case _ =>
+  }
+
+  def mediumIntenseCalculation[T](value: T): T = {
+    val time = ThreadLocalRandom.current().nextInt(0, 200)
+    sleep(time.milliseconds)
+
+    value
   }
 
   def randomDuration(): Duration = {

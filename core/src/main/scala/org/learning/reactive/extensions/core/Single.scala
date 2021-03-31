@@ -1,9 +1,21 @@
 package org.learning.reactive.extensions.core
 
-import io.reactivex.rxjava3.core.{Single => RxSingle}
+import io.reactivex.rxjava3.core.{SingleSource, Single => RxSingle, SingleTransformer => RxSingleTransformer}
 import io.reactivex.rxjava3.functions.{Consumer, Function}
+import org.learning.reactive.extensions.core.Single.SingleTransformer
 
 class Single[T](val rxSingle: RxSingle[T]) {
+
+  def compose[R](composer: SingleTransformer[T, R]): Single[R] = Single {
+    val singleTransformer = new RxSingleTransformer[T, R] {
+      override def apply(upstream: RxSingle[T]): SingleSource[R] = {
+        val downstream = composer(Single(upstream))
+        downstream.rxSingle
+      }
+    }
+
+    rxSingle compose singleTransformer
+  }
 
   def map[R](f: T => R): Single[R] = Single {
     val function: Function[T, R] = t => f(t)
@@ -27,9 +39,19 @@ class Single[T](val rxSingle: RxSingle[T]) {
     }
   }
 
+  def toFlowable: Flowable[T] = Flowable {
+    rxSingle.toFlowable
+  }
+
+  def toObservable: Observable[T] = Observable {
+    rxSingle.toObservable
+  }
+
 }
 
 object Single {
+
+  type SingleTransformer[U, D] = Single[U] => Single[D]
 
   def apply[T](rxSingle: RxSingle[T]): Single[T] =
     new Single(rxSingle)

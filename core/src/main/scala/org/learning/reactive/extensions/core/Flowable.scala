@@ -1,17 +1,46 @@
 package org.learning.reactive.extensions.core
 
-import io.reactivex.rxjava3.core.{BackpressureOverflowStrategy, BackpressureStrategy, Emitter, FlowableEmitter, FlowableOnSubscribe, Scheduler, Flowable => RxFlowable}
+import io.reactivex.rxjava3.core.{BackpressureOverflowStrategy, BackpressureStrategy, Emitter, FlowableEmitter, FlowableOnSubscribe, Scheduler, Flowable => RxFlowable, FlowableOperator => RxFlowableOperator, FlowableTransformer => RxFlowableTransformer}
 import io.reactivex.rxjava3.functions.{Action, BiConsumer, Consumer, Function, Supplier}
-import org.reactivestreams.Subscriber
+import org.learning.reactive.extensions.core.Flowable.{FlowableOperator, FlowableTransformer}
+import org.reactivestreams.{Publisher, Subscriber}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
+import scala.jdk.CollectionConverters._
 
 class Flowable[T](val rxFlowable: RxFlowable[T]) {
+
+  def collect[U](initialItem: U)(f: => (U, T) => Unit): Single[U] = Single {
+    val supplier: Supplier[U] = () => initialItem
+    val biConsumer: BiConsumer[U, T] = (u, t) => f(u, t)
+
+    rxFlowable.collect(supplier, biConsumer)
+  }
+
+  def compose[R](composer: FlowableTransformer[T, R]): Flowable[R] = Flowable {
+    val flowableTransformer = new RxFlowableTransformer[T, R] {
+      override def apply(upstream: RxFlowable[T]): Publisher[R] = {
+        val downstream = composer.apply(Flowable(upstream))
+        downstream.rxFlowable
+      }
+    }
+
+    rxFlowable compose flowableTransformer
+  }
 
   def doOnNext(onNext: T => Unit): Flowable[T] = Flowable {
     val function: Consumer[T] = t => onNext(t)
     rxFlowable doOnNext function
+  }
+
+  def lift[R](lifter: FlowableOperator[R, T]): Flowable[R] = Flowable {
+    val flowableOperator = new RxFlowableOperator[R, T] {
+      override def apply(subscriber: Subscriber[_ >: R]): Subscriber[_ >: T] =
+        lifter.apply(subscriber.asInstanceOf[Subscriber[R]])
+    }
+
+    rxFlowable lift flowableOperator
   }
 
   def map[R](mapper: T => R): Flowable[R] = Flowable {
@@ -41,6 +70,10 @@ class Flowable[T](val rxFlowable: RxFlowable[T]) {
 
   def onBackpressureLatest(): Flowable[T] = Flowable {
     rxFlowable.onBackpressureLatest()
+  }
+
+  def range(start: Int, count: Int): Flowable[Int] = Flowable {
+    RxFlowable.range(start, count).map(_.toInt)
   }
 
   def subscribeOn(scheduler: Scheduler): Flowable[T] = Flowable {
@@ -85,6 +118,10 @@ class Flowable[T](val rxFlowable: RxFlowable[T]) {
 
 object Flowable {
 
+  type FlowableTransformer[U, D] = Flowable[U] => Flowable[D]
+
+  type FlowableOperator[D, U] = Subscriber[D] => Subscriber[U]
+
   def apply[T](rxFlowable: RxFlowable[T]): Flowable[T] =
     new Flowable(rxFlowable)
 
@@ -94,6 +131,18 @@ object Flowable {
     }
 
     RxFlowable.create(source, mode)
+  }
+
+  def empty[T]: Flowable[T] = Flowable {
+    RxFlowable.empty()
+  }
+
+  def from[T](items: T*): Flowable[T] = Flowable {
+    RxFlowable fromIterable items.asJava
+  }
+
+  def from[T](iterable: Iterable[T]): Flowable[T] = Flowable {
+    RxFlowable fromIterable iterable.asJava
   }
 
   def generate[T](generator: Emitter[T] => Unit): Flowable[T] = Flowable {

@@ -1,9 +1,10 @@
 package org.learning.reactive.extensions.core
 
-import io.reactivex.rxjava3.core.{BackpressureStrategy, Notification, ObservableEmitter, ObservableOnSubscribe, Observer, Scheduler, Observable => RxObservable, Single => RxSingle}
+import io.reactivex.rxjava3.core.{BackpressureStrategy, Notification, ObservableConverter, ObservableEmitter, ObservableOnSubscribe, ObservableSource, Observer, Scheduler, Observable => RxObservable, ObservableOperator => RxObservableOperator, ObservableTransformer => RxObservableTransformer, Single => RxSingle}
 import io.reactivex.rxjava3.disposables.{Disposable => RxDisposable}
 import io.reactivex.rxjava3.functions.{Action, BiConsumer, BiFunction, Consumer, Function, Predicate, Supplier}
 import io.reactivex.rxjava3.schedulers.Timed
+import org.learning.reactive.extensions.core.Observable.{ObservableOperator, ObservableTransformer}
 
 import java.util.Comparator
 import java.util.concurrent.{Callable, CompletableFuture, TimeUnit}
@@ -68,6 +69,17 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     val biConsumer: BiConsumer[U, T] = (u, t) => f(u, t)
 
     rxObservable.collect(supplier, biConsumer)
+  }
+
+  def compose[R](composer: ObservableTransformer[T, R]): Observable[R] = Observable {
+    val observableTransformer = new RxObservableTransformer[T, R] {
+      override def apply(upstream: RxObservable[T]): ObservableSource[R] = {
+        val downstream = composer.apply(Observable(upstream))
+        downstream.rxObservable
+      }
+    }
+
+    rxObservable compose observableTransformer
   }
 
   def concatMap[R](mapper: T => Observable[R]): Observable[R] = Observable {
@@ -226,8 +238,16 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable.groupBy(function).map(GroupedObservable(_))
   }
 
-  def isEmpty(): Single[Boolean] = Single {
-    rxObservable.isEmpty().map(_.booleanValue)
+  def isEmpty: Single[Boolean] = Single {
+    rxObservable.isEmpty.map(_.booleanValue)
+  }
+
+  def lift[R](lifter: ObservableOperator[R, T]): Observable[R] = Observable {
+    val observableOperator = new RxObservableOperator[R, T] {
+      override def apply(observer: Observer[_ >: R]): Observer[_ >: T] = lifter(observer.asInstanceOf[Observer[R]])
+    }
+
+    rxObservable lift observableOperator
   }
 
   def map[R](mapper: T => R): Observable[R] = Observable {
@@ -323,7 +343,8 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     val function: java.util.function.Function[T, U] = t => keyExtractor(t)
     val comparator: Comparator[U] = (u1, u2) => ord.compare(u1, u2)
 
-    rxObservable sorted Comparator.comparing(function, comparator)
+    val result: RxObservable[T] = rxObservable sorted Comparator.comparing(function, comparator)
+    result
   }
 
   def startWith(items: T*): Observable[T] = Observable {
@@ -417,11 +438,19 @@ class Observable[T](val rxObservable: RxObservable[T]) {
     rxObservable timestamp unit
   }
 
+  def to[R](converter: Observable[T] => R): R = {
+    val observableConverter = new ObservableConverter[T, R] {
+      override def apply(upstream: RxObservable[T]): R = converter(Observable(rxObservable))
+    }
+
+    rxObservable to observableConverter
+  }
+
   def toFlowable(strategy: BackpressureStrategy): Flowable[T] = Flowable {
     rxObservable.toFlowable(strategy)
   }
 
-  def toList(): Single[List[T]] = Single {
+  def toList: Single[List[T]] = Single {
     rxObservable.toList().map(_.asScala).map(_.toList)
   }
 
@@ -504,6 +533,10 @@ class Observable[T](val rxObservable: RxObservable[T]) {
 
 object Observable {
 
+  type ObservableTransformer[U, D] = Observable[U] => Observable[D]
+
+  type ObservableOperator[D, U] = Observer[D] => Observer[U]
+
   def apply[T](rxObservable: RxObservable[T]): Observable[T] =
     new Observable(rxObservable)
 
@@ -537,7 +570,7 @@ object Observable {
     RxObservable create source
   }
 
-  def empty[T](): Observable[T] = Observable {
+  def empty[T]: Observable[T] = Observable {
     RxObservable.empty()
   }
 
