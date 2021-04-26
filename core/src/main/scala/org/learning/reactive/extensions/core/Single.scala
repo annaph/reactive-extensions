@@ -6,6 +6,8 @@ import org.learning.reactive.extensions.core.Single.SingleTransformer
 
 class Single[T](val rxSingle: RxSingle[T]) {
 
+  def blockingGet(): T = rxSingle.blockingGet()
+
   def compose[R](composer: SingleTransformer[T, R]): Single[R] = Single {
     val singleTransformer = new RxSingleTransformer[T, R] {
       override def apply(upstream: RxSingle[T]): SingleSource[R] = {

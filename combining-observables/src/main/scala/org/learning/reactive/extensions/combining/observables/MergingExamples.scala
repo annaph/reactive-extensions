@@ -108,7 +108,7 @@ object Example9 extends App {
 
   def intervalSrc(period: Int): Observable[String] = period match {
     case p if p <= 0 =>
-      Observable.empty()
+      Observable.empty
     case _ =>
       Example8 intervalSrc period
   }

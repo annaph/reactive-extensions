@@ -48,7 +48,7 @@ object Example31 extends App {
     log("Process 1 done!"))
 
   // no emission
-  val empty = Observable.empty[Int]()
+  val empty = Observable.empty[Int]
   empty.subscribe(
     n => log(s"Process 2: $n"),
     e => log(s"Error captured: $e"),

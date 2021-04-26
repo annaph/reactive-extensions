@@ -1,9 +1,8 @@
 package org.learning.reactive.extensions.observable.and.observer
 
-import java.time.LocalDateTime
-
 import org.learning.reactive.extensions.core.{Observable, log, sleep}
 
+import java.time.LocalDateTime
 import scala.concurrent.duration._
 
 object Example13 extends App {
@@ -67,7 +66,7 @@ object Example17 extends App {
 
 object Example18 extends App {
 
-  val empty = Observable.empty[String]()
+  val empty = Observable.empty[String]
 
   empty.subscribe(
     log,

@@ -12,7 +12,9 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:implicitConversions")
 
 ThisBuild / libraryDependencies ++= Seq(
-    "io.reactivex.rxjava3" % "rxjava" % "3.0.4")
+  "io.reactivex.rxjava3" % "rxjava" % "3.0.4",
+  "junit" % "junit" % "4.13.2" % Test,
+  "com.novocode" % "junit-interface" % "0.11" % Test)
 
 ThisBuild / fork := true
 
@@ -27,7 +29,8 @@ lazy val root = Project("reactive-extensions", file("."))
     concurrency,
     buffering,
     backpressure,
-    customOperators
+    customOperators,
+    testing
   )
 
 lazy val core = project in file("core")
@@ -58,3 +61,8 @@ lazy val backpressure =  project.in(file("backpressure"))
 
 lazy val customOperators =  Project("custom-operators", file("custom-operators"))
   .dependsOn(core)
+
+lazy val testing =  project.in(file("testing"))
+  .dependsOn(core)
+
+testOptions += Tests.Argument(TestFrameworks.JUnit, args = "-q", "-v")

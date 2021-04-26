@@ -77,7 +77,7 @@ object Example46 extends App {
 
   Observable.from(List(5, 2, 4, 0, 3))
     .map(10 / _)
-    .onErrorResumeWith(Observable.empty())
+    .onErrorResumeWith(Observable.empty)
     .subscribe(
       n => log(s"Received: $n"),
       e => log(s"Error: $e"),

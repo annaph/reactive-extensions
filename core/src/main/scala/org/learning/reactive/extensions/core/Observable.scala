@@ -5,6 +5,7 @@ import io.reactivex.rxjava3.disposables.{Disposable => RxDisposable}
 import io.reactivex.rxjava3.functions.{Action, BiConsumer, BiFunction, Consumer, Function, Predicate, Supplier}
 import io.reactivex.rxjava3.schedulers.Timed
 import org.learning.reactive.extensions.core.Observable.{ObservableOperator, ObservableTransformer}
+import org.learning.reactive.extensions.core.testing.{TestObserver, TestScheduler}
 
 import java.util.Comparator
 import java.util.concurrent.{Callable, CompletableFuture, TimeUnit}
@@ -17,6 +18,28 @@ class Observable[T](val rxObservable: RxObservable[T]) {
 
   def ambWith(other: Observable[T]): Observable[T] = Observable {
     rxObservable ambWith other.rxObservable
+  }
+
+  def blockingFirst(): T = rxObservable.blockingFirst()
+
+  def blockingForEach(onNext: T => Unit): Unit = {
+    val consumer: Consumer[T] = t => onNext(t)
+    rxObservable blockingForEach consumer
+  }
+
+  def blockingIterable(): Iterable[T] = rxObservable.blockingIterable().asScala
+
+  def blockingLast(): T = rxObservable.blockingLast()
+
+  def blockingLatest(): Iterable[T] = rxObservable.blockingLatest().asScala
+
+  def blockingMostRecent(initialItem: T): Iterable[T] = rxObservable.blockingMostRecent(initialItem).asScala
+
+  def blockingNext(): Iterable[T] = rxObservable.blockingNext().asScala
+
+  def blockingSubscribe[A >: T](onNext: A => Unit): Unit = {
+    val consumer: Consumer[A] = a => onNext(a)
+    rxObservable blockingSubscribe consumer
   }
 
   def blockingSubscribe[A >: T](onNext: A => Unit, onError: Throwable => Unit, onComplete: => Unit): Unit = {
@@ -389,6 +412,9 @@ class Observable[T](val rxObservable: RxObservable[T]) {
   def subscribe[A >: T](observer: Observer[A]): Unit =
     rxObservable subscribe observer
 
+  def subscribe[A >: T](observer: TestObserver[A]): Unit =
+    rxObservable subscribe observer.rxTestObserver
+
   def subscribeOn(scheduler: Scheduler): Observable[T] = Observable {
     rxObservable subscribeOn scheduler
   }
@@ -628,6 +654,10 @@ object Observable {
 
   def interval(period: Duration, scheduler: Scheduler): Observable[Long] = Observable {
     RxObservable.interval(period.toMillis, TimeUnit.MILLISECONDS, scheduler).map(_.longValue)
+  }
+
+  def interval(period: Duration, testScheduler: TestScheduler): Observable[Long] = Observable {
+    RxObservable.interval(period.toMillis, TimeUnit.MILLISECONDS, testScheduler.rxTestScheduler).map(_.longValue)
   }
 
   def just[T](item: T): Observable[T] = Observable {

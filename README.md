@@ -42,3 +42,7 @@ The source code contains different modules for the following chapters:
 9. Chapter 9 - Transformers and Custom Operators
 
    Module name: **custom-operators**
+
+10. Chapter 10 - Testing and Debugging
+
+   Module name: **testing**

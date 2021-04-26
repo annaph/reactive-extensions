@@ -1,10 +1,9 @@
 package org.learning.reactive.extensions.basic.operators
 
-import java.time.LocalDate
-import java.util.concurrent.ConcurrentHashMap
-
 import org.learning.reactive.extensions.core.{Observable, log}
 
+import java.time.LocalDate
+import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
 
 object Example22 extends App {
@@ -57,12 +56,12 @@ object Example27 extends App {
 
   Observable.just("One", "Two", "Three")
     .filter(_ contains 'z')
-    .isEmpty()
+    .isEmpty
     .subscribe(b => log(s"Received1: $b"))
 
   Observable.just("One", "Twoz", "Three")
     .filter(_ contains 'z')
-    .isEmpty()
+    .isEmpty
     .subscribe(b => log(s"Received2: $b"))
 
 }
@@ -91,7 +90,7 @@ object Example29 extends App {
 object Example30 extends App {
 
   Observable.just("Alpha", "Beta", "Gamma")
-    .toList()
+    .toList
     .subscribe(l => log(s"Received: ${l.mkString("[", ", ", "]")}"))
 
 }
