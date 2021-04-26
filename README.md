@@ -43,6 +43,6 @@ The source code contains different modules for the following chapters:
 
    Module name: **custom-operators**
 
-10. Chapter 10 - Testing and Debugging
+9. Chapter 10 - Testing and Debugging
 
    Module name: **testing**
